@@ -1,12 +1,9 @@
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.PriorityQueue;
+import java.util.*;
 
 public class Graph {
-    private static int vertexNum;
+    private int vertexNum;
     private Map<Integer, Node> map;
-    private static int currentStartId;
+    private int currentStartId;
 
     public Graph() {
         vertexNum = 0;
@@ -45,6 +42,7 @@ public class Graph {
             for (Path path : smallest.adjPathes) {
                 double length = path.start.distTo + path.roadLength;
                 if (length < path.goal.distTo) {
+                    //deque.remove(path.goal);
                     path.goal.distTo = length;
                     path.goal.edgeTo = smallest.ID;
                     deque.add(path.goal);
@@ -52,6 +50,8 @@ public class Graph {
             }
         }
     }
+
+
 
     public void printAllPaths() {
         System.out.println("==== 最短路径表 from " + map.get(currentStartId).name + " ====");
@@ -89,6 +89,7 @@ public class Graph {
         return deque;
     }
 
+
     public static void main(String[] args) {
         Graph g = new Graph();
         Node a = g.createNode("A");
@@ -102,5 +103,15 @@ public class Graph {
         g.Dijkstra(a.ID);
         g.printAllPaths();
     }
-
 }
+/*
+ Node 对象是同一个
+所有的队列元素其实指向同一块内存。
+当最短路径更新时，修改的就是这个内存里的 distTo，所以队列中所有引用能拿到最新的距离值。
+弹出旧距离的元素
+当队列弹出了某个“旧距离”的元素，它指向的 Node.distTo 已经被改小。
+由于判断逻辑会跳过那些距离不匹配或者已经处理过的节点，这种“旧的弹出”不会影响最终的最短路径结构。
+只是占用更多内存和运算
+不 remove 的情况下，旧的引用会一直留在队列中，直到被弹出丢弃。
+这会导致队列体积膨胀、弹出次数增多，但不会导致错误结果。
+*/

@@ -15,6 +15,7 @@ public class Node implements Comparable<Node>{
         this.adjPathes = new ArrayList<>();
     }
 
+
     @Override
     public int compareTo(Node o) {
         return Double.compare(this.distTo, o.distTo);
