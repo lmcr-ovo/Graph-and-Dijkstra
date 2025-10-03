@@ -4,9 +4,9 @@ import java.util.Map;
 import java.util.PriorityQueue;
 
 public class Graph {
-    private int vertexNum;
+    private static int vertexNum;
     private Map<Integer, Node> map;
-    private int currentStartId;
+    private static int currentStartId;
 
     public Graph() {
         vertexNum = 0;
@@ -45,7 +45,6 @@ public class Graph {
             for (Path path : smallest.adjPathes) {
                 double length = path.start.distTo + path.roadLength;
                 if (length < path.goal.distTo) {
-                    //deque.remove(path.goal);
                     path.goal.distTo = length;
                     path.goal.edgeTo = smallest.ID;
                     deque.add(path.goal);
