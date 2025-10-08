@@ -82,10 +82,4 @@
 | `isConnected` | `int p, int q` | `boolean` | 判断两节点是否在同一集合 |
 | `union` | `int p, int q` | `void` | 合并两个集合（加权优化） |
 
----
-
-✅ 这份文档现在：
-- 所有表格都符合标准 Markdown 表格语法
-- 在 GitHub、Gitee、Typora 显示对齐没有问题
-- 内容按照 **模块结构 → 功能特性 → 各类字段方法** 逻辑编排
 
