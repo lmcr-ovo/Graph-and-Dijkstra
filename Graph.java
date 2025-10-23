@@ -148,9 +148,11 @@ public class Graph {
         PriorityQueue<Path> PQ = new PriorityQueue<>(); // priority queue sorted by edge weight
         PQ.addAll(startNode.adjPathes); // add starting node edges
         WQuickUion WQU = new WQuickUion(vertexNum); // union-find to detect cycles
+
         while (!PQ.isEmpty() && mst.size() < vertexNum - 1) {
             Path minPath = PQ.poll(); // smallest edge
             PQ.addAll(minPath.goal.adjPathes); // expand from newly connected vertex
+
             int start = minPath.start.ID;
             int goal = minPath.goal.ID;
             if (!WQU.isConnected(start, goal)) { // if it doesn't form a cycle, add to MST
@@ -176,6 +178,72 @@ public class Graph {
             }
         }
     }
+
+    // for inDirected Acyclic Graph
+    public boolean isInDirectedCyclic(int s) {
+        currentStartId = s;
+        Node startNode = vertexesMap.get(s);
+        WQuickUion WQU = new WQuickUion(vertexNum);
+
+        for (Path path : pathList) {
+            int start = path.start.ID;
+            int goal = path.goal.ID;
+            if (WQU.isConnected(start, goal))
+                return true;
+            WQU.union(start, goal);
+        }
+        return false;
+    }
+
+    public boolean isCyclicDirectedGraph() {
+        int[] Visited = new int[vertexNum];
+        for (int i = 0; i < vertexNum; i++)
+            if (Visited[i] == 0 && dfsCycleCheck(vertexesMap.get(i), Visited))
+                return true;
+        return false;
+
+    }
+
+    private boolean dfsCycleCheck(Node node, int[] visited) {
+        if (visited[node.ID] == 1) {
+            visited[node.ID] = 2;
+            return true;
+        }
+        visited[node.ID] = 1;
+
+        for (Path path : node.adjPathes)
+            if (dfsCycleCheck(path.goal, visited))
+                return true;
+        return false;
+    }
+
+    public List<Node> topologicalSortBFS() {
+        if (isCyclicDirectedGraph())
+            throw new RuntimeException("the graph is not a DAG");
+        int[] inDegree = new int[vertexNum];
+        for (Path path : pathList)
+            inDegree[path.goal.ID] += 1;
+
+        Queue<Node> queue = new LinkedList<>();
+        for (int i = 0; i < vertexNum; i++)
+            if (inDegree[i] == 0)
+                queue.offer(vertexesMap.get(i));
+
+        List<Node> order = new LinkedList<>();
+        while (!queue.isEmpty()) {
+            Node curr = queue.poll();
+            order.add(curr);
+
+            for (Path path : curr.adjPathes) {
+                int targetID = path.goal.ID;
+                inDegree[targetID] -= 1;
+                if (inDegree[targetID] == 0)
+                    queue.offer(vertexesMap.get(targetID));
+            }
+        }
+        return order;
+    }
+
 
     // Print all shortest paths from the current start vertex
     public void printAllPaths() {
@@ -257,6 +325,20 @@ public class Graph {
         g.printPrimMST();
         g.KruskalMST();
         g.printKruskalMST();
+
+        g = new Graph();
+        a = g.createNode("A");
+        b = g.createNode("B");
+        c = g.createNode("C");
+
+        g.addSinglePath(a.ID, b.ID, 1);
+        g.addSinglePath(b.ID, c.ID, 1);
+        g.addSinglePath(c.ID, a.ID, 1); // 形成环
+
+        System.out.println(g.isCyclicDirectedGraph());
+// 输出: Cycle detected involving node: A
+// true
+
     }
 }
 /*
