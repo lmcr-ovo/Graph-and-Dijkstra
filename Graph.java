@@ -1,12 +1,12 @@
 import java.util.*;
 
 public class Graph {
-    private int vertexNum;
-    private int pathsNum;
-    private final Map<Integer, Node> vertexesMap;
-    private final List<Path> pathList;
-    private final List<Path> mst;
-    private int currentStartId;
+    private int vertexNum; // number of vertices in the graph
+    private int pathsNum;  // number of paths(edges) in the graph
+    private final Map<Integer, Node> vertexesMap; // mapping from vertex ID to Node object
+    private final List<Path> pathList; // list of all paths in the graph
+    private final List<Path> mst; // list of edges in the current Minimum Spanning Tree
+    private int currentStartId; // start vertex ID for shortest path/MST operations
 
     public Graph() {
         vertexNum = 0;
@@ -16,6 +16,7 @@ public class Graph {
         mst = new LinkedList<>();
     }
 
+    // Create a new node with string name and assign an ID
     public Node createNode(String name) {
         Node node =  new Node(name, vertexNum);
         vertexesMap.put(vertexNum, node);
@@ -23,6 +24,7 @@ public class Graph {
         return node;
     }
 
+    // Internal method to create a path between two vertex IDs and store it
     private Path createPath(int id1, int id2, int roadLength) {
         Path path = new Path(vertexesMap.get(id1), vertexesMap.get(id2), roadLength);
         pathList.add(path);
@@ -30,6 +32,7 @@ public class Graph {
         return path;
     }
 
+    // Add a single directed path from vertex id1 to id2
     public void addSinglePath(int id1, int id2, int roadLength) {
         if (id1 >= vertexNum || id2 >= vertexNum)
             throw new RuntimeException("can't control the not defined ID");
@@ -37,25 +40,41 @@ public class Graph {
         vertexesMap.get(id1).adjPathes.add(path);
     }
 
+    // Add two-way path (both directions) between two vertices
     public void addDoublePath(int id1, int id2, int roadLength) {
         addSinglePath(id1, id2, roadLength);
         addSinglePath(id2, id1, roadLength);
     }
 
 
+    /*
+    * Dijkstra’s:
+        PQ.add(source, 0)
+        For other vertices v, PQ.add(v, infinity)
+        While PQ is not empty:
+        p = PQ.removeSmallest()
+        Relax all edges from p
+
+      Relaxing an edge p → q with weight w:
+        If distTo[p] + w < distTo[q]:
+        distTo[q] = distTo[p] + w
+        edgeTo[q] = p
+        PQ.changePriority(q, distTo[q])
+        */
+    // Dijkstra's single-source shortest path algorithm (lazy update strategy)
     public void Dijkstra(int s) {
         currentStartId = s;
         Node start = vertexesMap.get(s);
-        PriorityQueue<Node> PQ = fill(start);
+        PriorityQueue<Node> PQ = reset(start); // initialize priority queue
         while (!PQ.isEmpty()) {
-            Node smallest = PQ.poll();
+            Node smallest = PQ.poll(); // node with minimum distTo
             if (smallest.distTo > vertexesMap.get(smallest.ID).distTo) {
-                continue; // 过期节点，丢掉
+                continue; // skip outdated entries in the queue
             }
-            for (Path path : smallest.adjPathes) {
+            for (Path path : smallest.adjPathes) { // relax all adjacent edges
                 double length = path.start.distTo + path.roadLength;
                 if (length < path.goal.distTo) {
-                    //PQ.remove(path.goal);
+                    //PQ.remove(path.goal); // decrease-key not used, lazy update
                     path.goal.distTo = length;
                     path.goal.edgeTo = smallest.ID;
                     PQ.add(path.goal);
@@ -64,21 +83,41 @@ public class Graph {
         }
     }
 
+    /*
+    MST Algorithm:
+        A cut is an assignment of a graph’s nodes to two non-empty sets.
+            A crossing edge is an edge which connects a node from one set to a node from the other set.
+          Cut property: Given any cut, minimum weight crossing edge is in the MST.
+        Proof:
+            Suppose that the minimum crossing edge e were not in the MST.
+            Adding e to the MST creates a cycle.
+            Some other edge f must also be a crossing edge.
+            Removing f and adding e is a lower weight spanning tree.
+            Contradiction!
+
+        Generic MST Finding Algorithm:
+            Start with no edges in the MST.
+                Find a cut that has no crossing edges in the MST.
+                Add the smallest crossing edge to the MST.
+                Repeat until V-1 edges.
+
+        */
+    // Standard Prim's algorithm using a priority queue
     public void PrimMST(int s) {
-        mst.clear();
+        mst.clear(); // clear MST list before computing
         currentStartId = s;
         Node start = vertexesMap.get(s);
-        PriorityQueue<Node> PQ = fill(start); // 初始化 distTo: 起点=0，其他=∞
-        boolean[] visited = new boolean[vertexNum]; // 记录已加入MST的节点
+        PriorityQueue<Node> PQ = reset(start); // initialization: start node distTo=0, others=∞
+        boolean[] visited = new boolean[vertexNum]; // mark vertices already in MST
 
         while (!PQ.isEmpty()) {
             Node smallest = PQ.poll();
 
-            // 已在MST中则跳过
+            // skip if vertex already in MST
             if (visited[smallest.ID]) continue;
             visited[smallest.ID] = true;
 
-            // 如果有父节点，则这条边在MST中
+            // if has a parent, add corresponding edge to MST
             if (smallest.edgeTo != -1) {
                 Node parent = vertexesMap.get(smallest.edgeTo);
                 for (Path p : parent.adjPathes) {
@@ -89,7 +128,7 @@ public class Graph {
                 }
             }
 
-            // Prim 更新：未访问节点的最小跨接边
+            // Prim's update: for neighbors not visited, check smaller crossing edges
             for (Path path : smallest.adjPathes) {
                 if (!visited[path.goal.ID] && path.goal.distTo > path.roadLength) {
                     path.goal.distTo = path.roadLength;
@@ -100,10 +139,32 @@ public class Graph {
         }
     }
 
+    // Lazy Prim's algorithm implementation with Union-Find to avoid cycles
+    public void lazyPrimMST(int s) {
+        mst.clear();
+        currentStartId = s;
+        Node startNode = vertexesMap.get(s);
+
+        PriorityQueue<Path> PQ = new PriorityQueue<>(); // priority queue sorted by edge weight
+        PQ.addAll(startNode.adjPathes); // add starting node edges
+        WQuickUion WQU = new WQuickUion(vertexNum); // union-find to detect cycles
+        while (!PQ.isEmpty() && mst.size() < vertexNum - 1) {
+            Path minPath = PQ.poll(); // smallest edge
+            PQ.addAll(minPath.goal.adjPathes); // expand from newly connected vertex
+            int start = minPath.start.ID;
+            int goal = minPath.goal.ID;
+            if (!WQU.isConnected(start, goal)) { // if it doesn't form a cycle, add to MST
+                WQU.union(start, goal);
+                mst.add(minPath);
+            }
+        }
+    }
+
+    // Kruskal's MST algorithm using union-find
     public void KruskalMST() {
         PriorityQueue<Path> PQ = new PriorityQueue<>();
         mst.clear();
-        PQ.addAll(pathList);
+        PQ.addAll(pathList); // all edges sorted by weight
         WQuickUion WQU = new WQuickUion(vertexNum);
         while (!PQ.isEmpty() && mst.size() < vertexNum - 1) {
             Path minPath = PQ.poll();
@@ -116,6 +177,7 @@ public class Graph {
         }
     }
 
+    // Print all shortest paths from the current start vertex
     public void printAllPaths() {
         System.out.println("\n==== 最短路径表 from " + vertexesMap.get(currentStartId).name + " ====");
         for (int id = 0; id < vertexNum; id++) {
@@ -123,7 +185,7 @@ public class Graph {
         }
     }
 
-
+    // Get path string representation to a target vertex from current start
     public String getPath(int targetId) {
         Node target = vertexesMap.get(targetId);
         if (target.distTo == Double.POSITIVE_INFINITY) {
@@ -136,12 +198,13 @@ public class Graph {
             pathNodes.add(0, current.name);
             current = vertexesMap.get(current.edgeTo);
         }
-        // 添加起点名称
+        // add start node name
         pathNodes.add(0, vertexesMap.get(currentStartId).name);
 
         return String.join(" -> ", pathNodes) + " (dist: " + target.distTo + ")";
     }
 
+    // Print the current MST generated by PrimMST()
     private void printPrimMST() {
         System.out.println("\n==== Prim 最小生成树 ====" );
         double totalWeight = 0;
@@ -152,7 +215,7 @@ public class Graph {
         System.out.println("总权重: " + totalWeight);
     }
 
-
+    // Run KruskalMST and print the resulting MST edges
     public void printKruskalMST() {
         System.out.println("\n==== Kruskal 最小生成树 ====");
         KruskalMST();
@@ -165,9 +228,8 @@ public class Graph {
         System.out.println("总权重: " + totalWeight);
     }
 
-
-
-    public PriorityQueue<Node> fill(Node start) {
+    // Reset all vertex distTo and edgeTo, put them into a priority queue
+    public PriorityQueue<Node> reset(Node start) {
         PriorityQueue<Node> PQ = new PriorityQueue<>();
         for (int i = 0; i < vertexNum; i++) {
             Node node = vertexesMap.get(i);
@@ -178,7 +240,7 @@ public class Graph {
         return PQ;
     }
 
-
+    // Example usage in main method
     public static void main(String[] args) {
         Graph g = new Graph();
         Node a = g.createNode("A");

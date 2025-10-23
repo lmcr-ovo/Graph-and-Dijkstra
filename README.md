@@ -1,85 +1,55 @@
 # 📚 Graph 图算法模块（Java实现 Dijkstra + Prim + Kruskal）
+### 1. 概述
+`Graph` 类是一个图数据结构的实现，支持 **最短路径** 和 **最小生成树**（MST）算法。  
+实现的主要算法包括：
+- Dijkstra（单源最短路径，使用懒更新策略）
+- Prim（优先队列版）
+- Lazy Prim（使用并查集避免环）
+- Kruskal（并查集实现）
 
-## **1. 概述**
-本模块是一个 **Java 图算法工具库**，实现了三种经典图算法：
+### 2. 数据结构
+- **Node**：顶点对象，包含 `distTo`（当前距离）、`edgeTo`（到达该点的上一个节点 ID）、`adjPathes`（邻边列表）等。
+- **Path**：边对象，包含起点、终点、权重。
+- **Graph**：
+  - `vertexesMap`：顶点映射
+  - `pathList`：全图边列表
+  - `mst`：当前 MST 边列表
 
-- **Dijkstra**：单源最短路径算法（适用于非负权重图）
-- **Prim**：最小生成树算法（逐步扩展集合方式）
-- **Kruskal**：最小生成树算法（全局排序 + 并查集防止环）
-
-支持加权有向图和无向图，适用于路径规划、网络分析、游戏地图导航、图论实验等场景。
-
----
-
-## **2. 功能特性**
-
-| 功能 | 描述 |
+### 3. 功能方法
+| 方法 | 功能 |
 |------|------|
-| **动态节点创建** | 支持自定义节点名称，自动分配唯一 ID |
-| **路径添加** | 支持单向或双向路径，自动维护邻接表和边列表 |
-| **最短路径计算** | 基于优先队列优化的 Dijkstra 算法，快速计算单源最短路径 |
-| **最小生成树计算** | 支持 Prim 和 Kruskal 两种 MST 算法 |
-| **不可达节点检测** | 距离不可达节点返回 `Unreachable` |
-| **结果打印** | 输出最短路径表和 MST 边集合及总权重 |
-| **性能优化** | 使用加权并查集 + 路径压缩优化 Kruskal 算法 |
+| `createNode(name)` | 创建顶点，分配 ID |
+| `addSinglePath(id1, id2, length)` | 添加单向带权边 |
+| `addDoublePath(id1, id2, length)` | 添加双向带权边 |
+| `Dijkstra(s)` | 执行 Dijkstra，从顶点 s 求最短路径 |
+| `PrimMST(s)` | 执行 Prim 求 MST |
+| `lazyPrimMST(s)` | 执行 Lazy Prim 求 MST |
+| `KruskalMST()` | 执行 Kruskal 求 MST |
+| `printAllPaths()` | 打印最短路径结果 |
+| `printPrimMST()` / `printKruskalMST()` | 打印 MST 边列表及总权重 |
+| `getPath(targetId)` | 获取到目标点的路径表示 |
+
+### 4. 特点
+- **Dijkstra** 使用懒更新策略，避免 priority queue 的 decrease-key 操作性能问题。
+- **PrimMST** 与 **lazyPrimMST** 都能生成 MST，但 lazyPrim 更直观，适合稀疏图。
+- **KruskalMST** 按权重全局排序选边，适合稀疏图。
+- 融入了 **Union-Find**（并查集）检测环路。
+
+### 5. 使用案例
+在 `main` 方法中创建简单图：
+```
+A-B (100)
+A-C (50)
+C-B (30)
+```
+依次运行：
+- Dijkstra 从 A 出发
+- PrimMST 从 A 出发
+- KruskalMST
+
+输出最短路径表及生成树结构。
 
 ---
 
-## **3. Graph 类主要方法**
-
-| 方法名 | 参数 | 返回值 | 作用说明 |
-|--------|------|--------|----------|
-| `createNode` | `String name` | `Node` | 创建带名称的新节点，自动分配 ID |
-| `createPath` | `int id1, int id2, int roadLength` | `Path` | 创建一条边，并加入边列表 |
-| `addSinglePath` | `int id1, int id2, int roadLength` | `void` | 添加单向路径，更新邻接表 |
-| `addDoublePath` | `int id1, int id2, int roadLength` | `void` | 添加双向路径（调用两次 `addSinglePath`） |
-| `Dijkstra` | `int startId` | `void` | 执行单源最短路径计算 |
-| `PrimMST` | `int startId` | `void` | 使用 Prim 算法计算并保存 MST |
-| `KruskalMST` | 无 | `void` | 使用 Kruskal 算法计算并保存 MST |
-| `printAllPaths` | 无 | `void` | 打印最短路径表 |
-| `getPath` | `int targetId` | `String` | 获取起点到目标节点的路径及距离 |
-| `printPrimMST` | 无 | `void` | 打印 Prim 算法生成的 MST |
-| `printKruskalMST` | 无 | `void` | 打印 Kruskal 算法生成的 MST |
-| `fill` | `Node start` | `PriorityQueue<Node>` | 初始化节点距离并返回优先队列 |
-
----
-
-## **4. Node 类主要字段**
-
-| 字段名 | 类型 | 作用 |
-|--------|------|------|
-| `name` | `String` | 节点名称 |
-| `ID` | `int` | 节点唯一 ID |
-| `distTo` | `double` | 起点到该节点的当前最短距离 |
-| `edgeTo` | `int` | 前驱节点 ID（用于路径追溯） |
-| `adjPathes` | `List<Path>` | 邻接边列表 |
-
----
-
-## **5. Path 类主要字段**
-
-| 字段名 | 类型 | 作用 |
-|--------|------|------|
-| `start` | `Node` | 边的起点 |
-| `goal` | `Node` | 边的终点 |
-| `roadLength` | `int` | 边权值（距离） |
-
----
-
-## **6. WQuickUion 类主要字段与方法**
-
-**字段：**
-
-| 字段名 | 类型 | 作用 |
-|--------|------|------|
-| `parent` | `int[]` | 存储父节点索引或集合大小（负数表示集合大小） |
-
-**方法：**
-
-| 方法名 | 参数 | 返回值 | 作用说明 |
-|--------|------|--------|----------|
-| `find` | `int p` | `int` | 查找并返回节点的根（带路径压缩） |
-| `isConnected` | `int p, int q` | `boolean` | 判断两节点是否在同一集合 |
-| `union` | `int p, int q` | `void` | 合并两个集合（加权优化） |
-
-
+我建议接下来我可以帮你画一张 **Dijkstra + Prim + Kruskal** 的流程对比图，这样你的介绍文档会更直观。  
+要我帮你画这张图吗？这样别人一看你的代码就能秒懂结构和算法执行步骤。
